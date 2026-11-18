@@ -1,0 +1,203 @@
+/* Charte CCAG : mêmes variables que les dashboards chirurgiens (part médicale), pour que l'app
+   des employés parle la même langue visuelle. Les 4 couleurs du logo : vert, cyan, bleu, taupe. */
+:root {
+  --vert: #93cfa9;
+  --cyan: #12c2f2;
+  --bleu: #0094d4;
+  --taupe: #938880;
+  --fond: #f2f1ef;
+  --carte: #ffffff;
+  --carte-2: #faf9f8;
+  --encre: #12100f;
+  --encre-2: #4a4542;
+  --encre-3: #7c7570;
+  --trait: #e2deda;
+  --trait-2: #efece9;
+  --ok-f: #e4f4ec;
+  --ok-e: #2e6b4a;
+  --warn-f: #fdf3e3;
+  --warn-e: #8a6216;
+  --bu-f: #e2f5fc;
+  --bu-e: #0a6e8c;
+  --err-f: #fbe9e6;
+  --err-e: #a3341f;
+  --ombre: 0 1px 2px rgba(20, 16, 14, 0.05), 0 8px 24px rgba(20, 16, 14, 0.05);
+  --gutter: 16px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --fond: #141517;
+    --carte: #1d1f22;
+    --carte-2: #232629;
+    --encre: #f2f0ee;
+    --encre-2: #bdb8b4;
+    --encre-3: #8b8580;
+    --trait: #2e3236;
+    --trait-2: #26292c;
+    --ok-f: #163023;
+    --ok-e: #7fcfa5;
+    --warn-f: #33280f;
+    --warn-e: #e3b45e;
+    --bu-f: #0e2c38;
+    --bu-e: #63c7e8;
+    --err-f: #3a1c16;
+    --err-e: #f08a73;
+    --ombre: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --fond: #141517;
+  --carte: #1d1f22;
+  --carte-2: #232629;
+  --encre: #f2f0ee;
+  --encre-2: #bdb8b4;
+  --encre-3: #8b8580;
+  --trait: #2e3236;
+  --trait-2: #26292c;
+  --ok-f: #163023;
+  --ok-e: #7fcfa5;
+  --warn-f: #33280f;
+  --warn-e: #e3b45e;
+  --bu-f: #0e2c38;
+  --bu-e: #63c7e8;
+  --err-f: #3a1c16;
+  --err-e: #f08a73;
+  --ombre: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--encre);
+  font-family: 'Gilroy', 'Outfit', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 300;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--bleu);
+  outline-offset: 2px;
+}
+
+/* Étiquette en capitales espacées des dashboards (.lab, .champ label, .carte > h2). */
+.lab {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--encre-3);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 8px;
+  border: 1px solid var(--bleu);
+  background: var(--bleu);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-quiet {
+  border-color: var(--trait);
+  background: var(--carte-2);
+  color: var(--encre-2);
+}
+.btn-quiet:hover {
+  border-color: var(--taupe);
+}
+.btn-danger {
+  border-color: var(--trait);
+  background: var(--carte-2);
+  color: var(--err-e);
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.p-ok {
+  background: var(--ok-f);
+  color: var(--ok-e);
+}
+.p-warn {
+  background: var(--warn-f);
+  color: var(--warn-e);
+}
+.p-bu {
+  background: var(--bu-f);
+  color: var(--bu-e);
+}
+
+/* Frise aux 4 couleurs du logo, comme en pied des dashboards. */
+.frise {
+  display: flex;
+  height: 4px;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.frise span {
+  flex: 1;
+}
+.frise span:nth-child(1) {
+  background: var(--vert);
+}
+.frise span:nth-child(2) {
+  background: var(--cyan);
+}
+.frise span:nth-child(3) {
+  background: var(--bleu);
+}
+.frise span:nth-child(4) {
+  background: var(--taupe);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

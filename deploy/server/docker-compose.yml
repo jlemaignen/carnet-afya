@@ -1,0 +1,30 @@
+# Fichier DU SERVEUR (/opt/carnet-afya/docker-compose.yml), installé à la main une fois.
+# Il n'est jamais remplacé par un déploiement : GitHub ne fournit que le code (./src), pas la
+# façon dont le conteneur tourne sur la machine (volumes, réseau, limites).
+# Pas de Caddy ici : le Caddy de l'app planning (/opt/ccag-auto-planning) sert les domaines
+# et joint le réseau partagé "ccag-edge", où cette app répond sous le nom "carnet-afya-app".
+services:
+  app:
+    build: ./src
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_PATH: /data/carnet-afya.db
+    volumes:
+      - carnet-afya-data:/data
+    expose:
+      - "3000"
+    mem_limit: 256m
+    networks:
+      default:
+      edge:
+        aliases:
+          - carnet-afya-app
+
+volumes:
+  carnet-afya-data:
+
+networks:
+  edge:
+    name: ccag-edge
+    external: true

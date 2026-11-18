@@ -1,0 +1,13 @@
+# /etc/systemd/system/carnet-afya-deploy.service
+[Unit]
+Description=Carnet AFYA : va chercher la derniere version testee sur GitHub
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ec2-user
+ExecStart=/opt/carnet-afya/poll-deploy.sh
+StandardOutput=append:/opt/carnet-afya/deploy.log
+StandardError=append:/opt/carnet-afya/deploy.log
+TimeoutStartSec=20min
