@@ -1,4 +1,4 @@
-import type { AccueilView, AdminPasswordResult, AdminUser, AuthOptions, LoginStep, MeView, Section, TotpSetup } from '../../../server/src/contract.ts';
+import type { AccueilView, AdminPasswordResult, AdminUser, AuthOptions, CarnetView, LoginStep, MeView, Patient, Section, TotpSetup } from '../../../server/src/contract.ts';
 
 export type { AccueilView, AdminPasswordResult, AdminUser, MeView, Section } from '../../../server/src/contract.ts';
 
@@ -58,4 +58,6 @@ export const api = {
   me: () => request<MeView>('GET', '/api/me'),
   changePassword: (current: string, next: string) => request<MeView>('POST', '/api/password', { current, next }),
   accueil: () => request<AccueilView>('GET', '/api/accueil'),
+  carnet: () => request<CarnetView>('GET', '/api/carnet'),
+  savePatient: (code: string, p: unknown) => request<Patient>('PUT', `/api/carnet/patients/${encodeURIComponent(code)}`, p),
 };

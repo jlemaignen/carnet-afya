@@ -16,13 +16,19 @@ parité.
 
 ## État au 18.11.2026
 
-- **Socle** repris tel quel de `main` (commit 70b94c1) : comptes, sécurité, administration,
-  déploiement. Les noms sont passés de « comité médical » à « carnet-afya ».
-- **Front** : le prototype validé est conservé à l'identique dans
-  `docs/prototype-carnet-afya.html`, avec ses données fictives. C'est la référence visuelle :
-  le front Svelte doit le reproduire au pixel près (mêmes couleurs, polices, écrans).
-- **Pas encore fait** : le portage des écrans en Svelte, l'API des patientes et la base. Le front
-  Svelte actuel est encore celui du socle (connexion, comptes, accueil vide).
+- **Socle** repris de `main` (commit 70b94c1) : comptes, sécurité, administration, déploiement.
+  Les écrans du socle (connexion, mot de passe, sécurité, comptes) sont aux couleurs et polices AFYA.
+- **Carnet en place**, testé en local avec un compte participant et un compte formateur :
+  - `server/src/carnet.ts` : validation des fiches (champs inconnus écartés, valeurs bornées) ;
+  - `server/src/routes/carnet.ts` : `GET /api/carnet` filtré selon le rôle, `PUT
+    /api/carnet/patients/:code` réservé au participant propriétaire ;
+  - `web/src/carnet/` : les écrans du prototype, à l'identique (`carnet.css` limité à `.afya`,
+    `engine.js` généré par `build-engine.cjs` depuis le script du prototype), branchés sur l'API ;
+  - `web/src/components/Carnet.svelte` : relie le carnet à la session, à la sécurité et aux comptes.
+- **Écarts voulus avec le prototype** : plus de compte invité ni de bandeau de démo, bouton
+  « Télécharger le CSV » en plus de « Copier », date du jour en heure locale (le prototype
+  proposait la veille).
+- Le prototype reste dans `docs/prototype-carnet-afya.html`, comme référence visuelle.
 
 ## Architecture
 
@@ -45,30 +51,36 @@ Navigateur -- https://<domaine> --> Caddy (partagé, /opt/ccag-auto-planning) --
 
 Le filtrage se fait sur le serveur : un participant ne reçoit jamais les fiches d'un autre.
 
-## Données (à construire)
+## Données
 
-Reprises du prototype, une table par objet :
+- `participants` : identifiant AFYA (`AFYA / ETH / 2024 / 01`), nom, pays, site, compte rattaché.
+- `patients` : une fiche JSON par patiente (identification, difficultés, complications et
+  évaluations `pre`, `d30`, `m6`, `m12`), avec son participant, ses dates et l'auteur de la
+  dernière modification.
 
-- `participants` : identifiant AFYA (`AFYA / ETH / 2024 / 01`), nom, pays, site, compte lié.
-- `patients` : code, participant, âge, parité, hôpital, date, type (`SP`, `RVF`, `BOTH`),
-  origine, difficultés peropératoires, précisions, cas à discuter.
-- `complications` : patiente, type, date, grade de Clavien-Dindo.
-- `visits` : patiente, temps (`pre`, `d30`, `m6`, `m12`), 5 items de Wexner, réponses FIQL,
-  santé sexuelle, continence, statut (revue ou perdue de vue).
+Le code d'une patiente reprend l'identifiant de son participant (`ETH-2024-01-P001`) : le serveur
+refuse tout code qui n'est pas dans le carnet du compte. Les échéances, les scores (Wexner, FIQL),
+les statistiques et l'export CSV sont calculés dans le navigateur avec le code du prototype, sur
+les seules fiches que le serveur a envoyées.
 
-Les échéances (1 mois = 30 j, 6 mois = 182 j, 12 mois = 365 j, « en retard » au-delà de 30 j) et
-les scores (Wexner total, quatre échelles FIQL) sont calculés sur le serveur avec les mêmes règles
-que le prototype, pour que l'export et les écrans donnent les mêmes chiffres.
-
-## API (à construire)
+## API
 
 | Méthode | Route | Rôle |
 |---|---|---|
-| GET | `/api/carnet/patients` | participant : les siennes ; formateur : toutes, filtrées |
-| POST, PUT | `/api/carnet/patients/:code` | participant propriétaire |
-| PUT | `/api/carnet/patients/:code/visits/:tp` | participant propriétaire |
-| GET | `/api/carnet/stats` | KPI, Wexner par temps, FIQL, répartition, activité par trimestre |
-| GET | `/api/carnet/export.csv` | formateur, une ligne par patiente, variables stables |
+| GET | `/api/carnet` | participant : son carnet ; formateur : tous les participants et toutes les fiches |
+| PUT | `/api/carnet/patients/:code` | participant propriétaire, fiche entière ; le formateur est en lecture seule |
+
+## Participants
+
+Un compte participant n'ouvre le carnet qu'une fois rattaché à son identifiant AFYA :
+
+```bash
+docker compose exec app node src/tools/users.ts add prenom.nom@exemple.ch "Dr Prénom Nom" participant
+docker compose exec app node src/tools/users.ts participant "AFYA / ETH / 2024 / 01" "Dr Prénom Nom" ETH "Bahir Dar" prenom.nom@exemple.ch
+docker compose exec app node src/tools/users.ts participants
+```
+
+Un formateur reçoit le rôle `formateur` (`users.ts add … formateur`, ou bouton « Comptes »).
 
 ## Points à trancher avant la mise en ligne
 
@@ -77,8 +89,6 @@ que le prototype, pour que l'export et les écrans donnent les mêmes chiffres.
   (qui est responsable, quel accord).
 - **FIQL** : la traduction française est une traduction de travail, à remplacer par la version
   validée (note déjà affichée dans le prototype).
-- **Polices** : la politique de sécurité interdit toute ressource externe. Space Grotesk et
-  Atkinson Hyperlegible doivent être servies par l'app, pas par Google Fonts.
 - **Connexion Google** : le prototype l'affiche, le socle ne la propose pas. À retirer ou à ajouter.
 - **Domaine** : par exemple `carnet.afya-geneva.org` ou un sous-domaine du CCA.
 
@@ -110,7 +120,7 @@ que le prototype, pour que l'export et les écrans donnent les mêmes chiffres.
 cp .env.example .env   # puis SESSION_SECRET (openssl rand -base64 48)
 cd server && npm install && npm test
 cd ../web && npm install && npm run build
-cd .. && sh scripts/seed-dev.sh     # compte de test, voir le script
+cd .. && sh scripts/seed-dev.sh     # données fictives du prototype, comptes participant@ et formateur@exemple.ch
 cd server && npm run dev            # http://localhost:3030
 ```
 

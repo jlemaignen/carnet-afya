@@ -2,7 +2,7 @@
   import { api, setUnauthorizedHandler, type MeView } from './lib/api.ts';
   import Brand from './components/Brand.svelte';
   import ChangePassword from './components/ChangePassword.svelte';
-  import Dashboard from './components/Dashboard.svelte';
+  import Carnet from './components/Carnet.svelte';
   import Login from './components/Login.svelte';
   import ResetPassword from './components/ResetPassword.svelte';
 
@@ -51,7 +51,7 @@
     </section>
   </div>
 {:else if me}
-  <Dashboard {me} onLogout={logout} onMe={(m) => (me = m)} />
+  <Carnet {me} onLogout={logout} onMe={(m) => (me = m)} />
 {:else}
   <Login onLogin={(m) => (me = m)} />
 {/if}

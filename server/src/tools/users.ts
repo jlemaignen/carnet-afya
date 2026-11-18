@@ -9,6 +9,8 @@
 //   node src/tools/users.ts disable <email> | enable <email>
 //   node src/tools/users.ts delete <email>                            (supprime le compte, le journal reste)
 //   node src/tools/users.ts journal                                   (50 derniers événements)
+//   node src/tools/users.ts participant "AFYA / ETH / 2024 / 01" "Dr Nom" ETH "Site" [email]  (crée ou modifie, rattache au compte)
+//   node src/tools/users.ts participants                              (participants AFYA et comptes rattachés)
 //
 // <rubriques> : liste séparée par des virgules (voir SECTIONS dans contract.ts) ou "all" pour tout.
 // Sur le serveur : docker compose exec app node src/tools/users.ts add prenom.nom@exemple.ch "Prénom Nom" all
@@ -139,8 +141,22 @@ try {
     case 'journal':
       console.table(repo.recentEvents());
       break;
+    // Participants AFYA : users.ts participant "<AFYA / ETH / 2024 / 01>" "<Dr Nom>" <pays> "<site>" [email]
+    case 'participant': {
+      const [id, name, country, site, linkEmail] = process.argv.slice(3);
+      if (!/^AFYA \/ [A-Z]{3} \/ \d{4} \/ \d{2}$/.test(id ?? '') || !name || !country || !site) {
+        throw new Error('Usage : participant "AFYA / ETH / 2024 / 01" "Dr Nom" ETH "Site" [email]');
+      }
+      repo.upsertParticipant({ id, name, country: country.toUpperCase(), site });
+      if (linkEmail) repo.linkParticipant(id, need(linkEmail).id);
+      console.log(`Participant ${id} enregistré${linkEmail ? `, rattaché à ${linkEmail}` : ''}.`);
+      break;
+    }
+    case 'participants':
+      console.table(repo.listParticipants().map((p) => ({ ...p, compte: p.userId ? repo.findUser(p.userId)?.email ?? '' : '' })));
+      break;
     default:
-      console.log('Usage : users.ts list | add <email> "<Nom>" <rubriques> | sections <email> <rubriques> | password <email> | totp-reset <email> | admin <email> on|off | disable <email> | enable <email> | delete <email> | journal');
+      console.log('Usage : users.ts list | add <email> "<Nom>" <rubriques> | sections <email> <rubriques> | password <email> | totp-reset <email> | admin <email> on|off | disable <email> | enable <email> | delete <email> | journal | participant "<AFYA / PAYS / AAAA / NN>" "<Nom>" <pays> "<site>" [email] | participants');
   }
 } catch (e) {
   console.error((e as Error).message);

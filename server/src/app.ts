@@ -12,6 +12,7 @@ import type { Mailer } from './mailer.ts';
 import { registerAccueilRoutes } from './routes/accueil.ts';
 import { registerAdminRoutes } from './routes/admin.ts';
 import { registerAuthRoutes } from './routes/auth.ts';
+import { registerCarnetRoutes } from './routes/carnet.ts';
 
 export interface AppDeps {
   config: Config;
@@ -79,6 +80,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const auth = registerAuthRoutes(app, deps, deps.throttle ?? new LoginThrottle());
   registerAccueilRoutes(app, deps, auth.requireUser);
   registerAdminRoutes(app, deps, auth.requireUser);
+  registerCarnetRoutes(app, deps, auth.requireUser);
 
   // Front (build Vite) : fichiers statiques + repli sur index.html.
   if (deps.webDist && existsSync(join(deps.webDist, 'index.html'))) {

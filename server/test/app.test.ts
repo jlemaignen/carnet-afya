@@ -23,7 +23,7 @@ const config: Config = {
   mail: { transport: 'none', host: '', port: 587, secure: false, user: '', password: '', from: '' },
 };
 
-async function setup(sections: Section[] = ['general']) {
+async function setup(sections: Section[] = ['formateur']) {
   const repo = new Repository(':memory:');
   const userId = repo.createUser(EMAIL, 'Personne Externe', await hashPassword(PASSWORD), sections);
   const app = await buildApp({ config, repo, logger: false, throttle: new LoginThrottle(3) });
@@ -290,15 +290,15 @@ describe('mot de passe oublié', () => {
 
 describe('accueil et rubriques', () => {
   it('ouvert avec une rubrique, rubriques renvoyées', async () => {
-    const ctx = await setup(['general']);
+    const ctx = await setup(['formateur']);
     const cookie = await login(ctx);
     const res = await ctx.app.inject({ method: 'GET', url: '/api/accueil', headers: { cookie } });
     assert.equal(res.statusCode, 200);
-    assert.deepEqual(res.json().sections, ['general']);
+    assert.deepEqual(res.json().sections, ['formateur']);
   });
 
   it('changer les rubriques prend effet tout de suite ; aucune rubrique = 403', async () => {
-    const ctx = await setup(['general']);
+    const ctx = await setup(['formateur']);
     const cookie = await login(ctx);
     assert.equal((await ctx.app.inject({ method: 'GET', url: '/api/accueil', headers: { cookie } })).statusCode, 200);
     ctx.repo.setSections(ctx.userId, []);
@@ -307,7 +307,7 @@ describe('accueil et rubriques', () => {
 
   it('mot de passe provisoire : à changer avant les données, puis accès normal', async () => {
     const repo = new Repository(':memory:');
-    repo.createUser('provisoire@exemple.ch', 'Provisoire', await hashPassword(PASSWORD), ['general'], true);
+    repo.createUser('provisoire@exemple.ch', 'Provisoire', await hashPassword(PASSWORD), ['formateur'], true);
     const app = await buildApp({ config, repo, logger: false, throttle: new LoginThrottle(3) });
     const ctx = { app, repo, userId: 0 };
     const { res, session } = await password(ctx, PASSWORD, 'provisoire@exemple.ch');
@@ -336,9 +336,9 @@ describe('accueil et rubriques', () => {
   });
 
   it('parseSections', () => {
-    assert.deepEqual(parseSections('general, general'), ['general']);
-    assert.deepEqual(parseSections('all'), ['general']);
-    assert.throws(() => parseSections('general,patients'));
+    assert.deepEqual(parseSections('formateur, formateur'), ['formateur']);
+    assert.deepEqual(parseSections('all'), ['participant', 'formateur']);
+    assert.throws(() => parseSections('formateur,patients'));
   });
 });
 
@@ -352,7 +352,7 @@ describe('administrateurs', () => {
   }
   const call = (ctx: Ctx, method: 'GET' | 'POST' | 'PATCH', url: string, cookie: string, payload?: object) =>
     ctx.app.inject({ method, url, headers: { cookie }, ...(payload ? { payload } : {}) });
-  const nouveau = { email: 'Invitee@Exemple.ch', displayName: 'Personne Invitée', sections: ['general'] };
+  const nouveau = { email: 'Invitee@Exemple.ch', displayName: 'Personne Invitée', sections: ['formateur'] };
 
   it('refusé sans session, à un compte ordinaire, et à un administrateur sans application', async () => {
     const ctx = await setup();
@@ -374,7 +374,7 @@ describe('administrateurs', () => {
     assert.equal(res.statusCode, 200);
     const { user, temporaryPassword } = res.json();
     assert.equal(user.email, 'invitee@exemple.ch');
-    assert.deepEqual(user.sections, ['general']);
+    assert.deepEqual(user.sections, ['formateur']);
     assert.equal(user.mustChangePassword, true);
     assert.equal(user.isAdmin, false);
     assert.equal(temporaryPassword.length >= 12, true);
@@ -441,9 +441,9 @@ describe('administrateurs', () => {
     const soi = await call(ctx, 'PATCH', `/api/admin/users/${ctx.userId}`, cookie, { sections: [] });
     assert.equal(soi.statusCode, 200);
     assert.deepEqual(soi.json().sections, []);
-    assert.equal((await call(ctx, 'PATCH', `/api/admin/users/${ctx.userId}`, cookie, { sections: ['general'], disabled: true })).statusCode, 403, 'rubriques seulement');
+    assert.equal((await call(ctx, 'PATCH', `/api/admin/users/${ctx.userId}`, cookie, { sections: ['formateur'], disabled: true })).statusCode, 403, 'rubriques seulement');
     assert.equal((await call(ctx, 'PATCH', `/api/admin/users/${ctx.userId}`, cookie, { displayName: 'Autre nom' })).statusCode, 403);
-    assert.equal((await call(ctx, 'PATCH', `/api/admin/users/${autre}`, cookie, { sections: ['general'] })).statusCode, 403, "pas les rubriques d'un autre administrateur");
+    assert.equal((await call(ctx, 'PATCH', `/api/admin/users/${autre}`, cookie, { sections: ['formateur'] })).statusCode, 403, "pas les rubriques d'un autre administrateur");
     assert.equal(ctx.repo.findUser(ctx.userId)!.disabled, 0);
   });
 
@@ -499,12 +499,12 @@ describe('administrateurs', () => {
         password_hash TEXT NOT NULL, sections TEXT NOT NULL DEFAULT '[]', disabled INTEGER NOT NULL DEFAULT 0, sessions_valid_after INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now')), last_login_at TEXT, totp_secret TEXT, totp_pending TEXT, totp_last_step INTEGER NOT NULL DEFAULT 0,
         must_change_password INTEGER NOT NULL DEFAULT 0);
-        INSERT INTO users (email, display_name, password_hash, sections) VALUES ('ancien@exemple.ch', 'Ancien', 'x', '["general"]');`);
+        INSERT INTO users (email, display_name, password_hash, sections) VALUES ('ancien@exemple.ch', 'Ancien', 'x', '["formateur"]');`);
       old.close();
       const repo = new Repository(file);
       const u = repo.findUserByEmail('ancien@exemple.ch')!;
       assert.equal(u.is_admin, 0);
-      assert.equal(u.sections, '["general"]');
+      assert.equal(u.sections, '["formateur"]');
       repo.setAdmin(u.id, true);
       assert.equal(new Repository(file).findUser(u.id)!.is_admin, 1);
     } finally {

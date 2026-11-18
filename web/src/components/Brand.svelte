@@ -2,15 +2,15 @@
   let { height = 36 }: { height?: number } = $props();
 </script>
 
-<!-- Logo officiel ; variante au texte clair pour le mode sombre. -->
-<picture>
-  <source srcset="/logo-ccag-dark.png" media="(prefers-color-scheme: dark)" />
-  <img src="/logo-ccag.png" alt="Centre de Chirurgie Ambulatoire de Genève" {height} width={Math.round(height * 4.6)} />
-</picture>
+<!-- Logo AFYA Geneva, repris du prototype ; fond blanc en mode sombre comme dans le carnet. -->
+<img src="/logo-afya.png" alt="AFYA Geneva" {height} />
 
 <style>
   img {
     display: block;
     width: auto;
+  }
+  @media (prefers-color-scheme: dark) {
+    img { background: #fff; border-radius: 8px; padding: 3px; }
   }
 </style>

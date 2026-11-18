@@ -1,18 +1,18 @@
-/* Charte CCAG : mêmes variables que les dashboards chirurgiens (part médicale), pour que l'app
-   des employés parle la même langue visuelle. Les 4 couleurs du logo : vert, cyan, bleu, taupe. */
+/* Couleurs AFYA (celles du prototype) appliquées aux écrans du socle : connexion, mot de passe,
+   sécurité, comptes. Le carnet lui-même a ses propres jetons dans carnet/carnet.css. */
 :root {
-  --vert: #93cfa9;
-  --cyan: #12c2f2;
-  --bleu: #0094d4;
-  --taupe: #938880;
-  --fond: #f2f1ef;
+  --vert: #2f7d32;
+  --cyan: #d06397;
+  --bleu: #194a6f;
+  --taupe: #5d6b7a;
+  --fond: #f4f6f9;
   --carte: #ffffff;
-  --carte-2: #faf9f8;
-  --encre: #12100f;
-  --encre-2: #4a4542;
-  --encre-3: #7c7570;
-  --trait: #e2deda;
-  --trait-2: #efece9;
+  --carte-2: #eaeff4;
+  --encre: #1d2733;
+  --encre-2: #3c4a59;
+  --encre-3: #5d6b7a;
+  --trait: #d5dde6;
+  --trait-2: #e6ebf1;
   --ok-f: #e4f4ec;
   --ok-e: #2e6b4a;
   --warn-f: #fdf3e3;
@@ -83,7 +83,7 @@ body {
   margin: 0;
   background: var(--fond);
   color: var(--encre);
-  font-family: 'Gilroy', 'Outfit', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
   font-weight: 300;
   font-size: 16px;
   line-height: 1.45;

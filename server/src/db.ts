@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { SECTIONS, type Section } from './contract.ts';
+import { SECTIONS, type Participant, type Patient, type Section } from './contract.ts';
 
 export interface UserRow {
   id: number;
@@ -95,6 +95,25 @@ export class Repository {
         kind TEXT NOT NULL,
         detail TEXT
       );
+    `);
+    // Carnet : participants AFYA (rattachés à un compte) et patientes, une fiche JSON par patiente.
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS participants (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        country TEXT NOT NULL,
+        site TEXT NOT NULL,
+        user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE SET NULL
+      );
+      CREATE TABLE IF NOT EXISTS patients (
+        code TEXT PRIMARY KEY,
+        participant_id TEXT NOT NULL REFERENCES participants(id),
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_by INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS patients_participant ON patients(participant_id);
     `);
     // Migration : colonne ajoutée après la mise en service, sans effacer les comptes existants
     const colonnes = this.db.prepare('PRAGMA table_info(users)').all() as { name: string }[];
@@ -235,6 +254,50 @@ export class Repository {
   countResetRequests(userId: number, sinceIso: string): number {
     const r = this.db.prepare("SELECT COUNT(*) AS n FROM events WHERE user_id = ? AND kind = 'password_reset_requested' AND at >= ?").get(userId, sinceIso) as { n: number };
     return Number(r.n);
+  }
+
+  // ── Carnet ───────────────────────────────────────────────────────────────
+
+  upsertParticipant(p: Participant): void {
+    this.db
+      .prepare('INSERT INTO participants (id, name, country, site) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, country = excluded.country, site = excluded.site')
+      .run(p.id, p.name, p.country, p.site);
+  }
+
+  /** Rattache un participant à un compte (un compte = un participant au plus). null : détache. */
+  linkParticipant(participantId: string, userId: number | null): void {
+    if (userId !== null) this.db.prepare('UPDATE participants SET user_id = NULL WHERE user_id = ?').run(userId);
+    this.db.prepare('UPDATE participants SET user_id = ? WHERE id = ?').run(userId, participantId);
+  }
+
+  listParticipants(): (Participant & { userId: number | null })[] {
+    return (this.db.prepare('SELECT id, name, country, site, user_id FROM participants ORDER BY id').all() as unknown as (Participant & { user_id: number | null })[])
+      .map(({ user_id, ...p }) => ({ ...p, userId: user_id }));
+  }
+
+  participantOfUser(userId: number): Participant | undefined {
+    return this.db.prepare('SELECT id, name, country, site FROM participants WHERE user_id = ?').get(userId) as Participant | undefined;
+  }
+
+  findPatientOwner(code: string): string | undefined {
+    const r = this.db.prepare('SELECT participant_id FROM patients WHERE code = ?').get(code) as { participant_id: string } | undefined;
+    return r?.participant_id;
+  }
+
+  /** Toutes les patientes (participantId absent) ou celles d'un participant, les plus récentes d'abord. */
+  listPatients(participantId?: string): Patient[] {
+    const rows = (participantId
+      ? this.db.prepare('SELECT data FROM patients WHERE participant_id = ?').all(participantId)
+      : this.db.prepare('SELECT data FROM patients').all()) as { data: string }[];
+    return rows.map((r) => JSON.parse(r.data) as Patient).sort((a, b) => b.date.localeCompare(a.date) || b.code.localeCompare(a.code));
+  }
+
+  savePatient(p: Patient, userId: number): void {
+    this.db
+      .prepare(
+        "INSERT INTO patients (code, participant_id, data, updated_by) VALUES (?, ?, ?, ?) ON CONFLICT(code) DO UPDATE SET data = excluded.data, updated_at = datetime('now'), updated_by = excluded.updated_by",
+      )
+      .run(p.code, p.pid, JSON.stringify(p), userId);
   }
 
   // ── Journal ──────────────────────────────────────────────────────────────
