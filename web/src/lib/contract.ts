@@ -22,9 +22,16 @@ export interface Participant {
   name: string;
   country: string;
   site: string;
+  /** Nom de famille : sert au numéro des patientes (ETH_GIRMA_001). */
+  last: string;
+  first?: string;
+  specialty?: string | null;
+  /** Certification de l'atelier, saisie par l'équipe pédagogique. */
+  ws: { date: string; place: string } | null;
+  registered?: boolean;
 }
 
-export const TIMEPOINTS = ['pre', 'd30', 'm6', 'm12'] as const;
+export const TIMEPOINTS = ['pre', 'd30', 'm6', 'm12', 'late'] as const;
 export type Timepoint = (typeof TIMEPOINTS)[number];
 
 export interface Complication {
@@ -33,39 +40,90 @@ export interface Complication {
   grade: string;
 }
 
-/** Une évaluation (préopératoire ou suivi). « lost » : perdue de vue, sans autre donnée. */
 export interface Visit {
   status: 'seen' | 'lost';
+  /** Suivi tardif : date de la visite. */
+  date?: string;
   wexner?: (number | null)[];
-  fiql?: Record<string, number | null>;
-  sex?: { active: boolean | null; reason: string | null; dysp: boolean | null; fear: boolean | null };
+  fiq8?: Record<string, number | 'na'>;
+  sex?: { active: boolean | null; reason: string | null; dysp: string | null; fear: boolean | null };
   continence?: string | null;
 }
 
-/** Une patiente, connue seulement par son code : aucune identité n'est saisie. */
+export interface Operation {
+  spType: string | null;
+  assoc: string[];
+  quality: string | null;
+  contam: string | null;
+  suture: { mat: string | null; size: string | null };
+  abx: string | null;
+  abxList: string[];
+  note: string;
+}
+
+export interface Feedback {
+  from: 'trainer' | 'part';
+  kind: 'msg' | 'val' | 'kudos';
+  text: string;
+  date: string;
+  read: boolean;
+}
+
 export interface Patient {
   code: string;
   pid: string;
   age: number;
   parity: number;
   hospital: string;
+  consultDate: string | null;
   date: string;
   type: 'SP' | 'RVF' | 'BOTH';
   origin: string;
+  causeNote: string;
+  durMonths: number | null;
+  prior: string | null;
+  priorOk: string | null;
+  uro: string | null;
+  uroNote: string;
+  cloaca: string | null;
+  pbody: string | null;
+  rvfEx: string | null;
+  exam: string;
+  plan: string;
+  op: Operation | null;
   diffs: string[];
   diffNote: string;
   comps: Complication[];
   flag: boolean;
   visits: Partial<Record<Timepoint, Visit>>;
+  fb: Feedback[];
 }
 
-/** Tout ce que le carnet charge à l'ouverture, déjà filtré selon le rôle. */
+export interface Workshop {
+  id: string;
+  place: string;
+  date: string;
+  active: boolean;
+}
+
+/** Comparaison avec le groupe et réseau AFYA : calculés sur le serveur, jamais de fiche d'un autre. */
+export interface GroupView {
+  /** null tant que le groupe compte moins de 5 participants avec des patientes. */
+  cmp: { wxPre: number | null; wxLast: number | null; f8Pre: number | null; f8M12: number | null; m12Pct: number | null; compPct: number } | null;
+  network: {
+    total: number;
+    countries: Record<string, number>;
+    cotm: { type: string; country: string; wxPre: number | null; wxLast: number | null; f8Pre: number | null; f8Last: number | null; spType: string | null; name: string } | null;
+  };
+}
+
 export interface CarnetView {
   role: 'part' | 'trainer';
-  /** Le participant rattaché au compte (rôle participant). */
   participant: Participant | null;
   participants: Participant[];
   patients: Patient[];
+  workshops: Workshop[];
+  group: GroupView | null;
 }
 
 export interface MeView {

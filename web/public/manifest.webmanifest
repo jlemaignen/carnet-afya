@@ -1,0 +1,23 @@
+{
+ "name": "Carnet AFYA",
+ "short_name": "Carnet AFYA",
+ "description": "Carnet de bord chirurgical des participants AFYA Geneva",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#f4f6f9",
+ "theme_color": "#194a6f",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}

@@ -1,12 +1,13 @@
-/* CSS du prototype Carnet AFYA, repris à l’identique et limité à .afya (le socle garde le sien). */
+/* CSS du prototype Carnet AFYA (docs/prototype-carnet-afya.html), limitée à .afya.
+   Générée par build-css.cjs : ne pas modifier à la main. */
 
-/* Layout: mobile-first app shell, sticky top bar, bottom tab bar, single 720px column */
+
 :root{
   --bg:#f4f6f9; --surface:#ffffff; --surface-2:#eaeff4; --line:#d5dde6;
   --fg:#1d2733; --muted:#5d6b7a; --accent:#194a6f; --accent-ink:#ffffff; --accent-soft:#dde8f1; --pink:#b8467c; --pink-strong:#d06397; --pink-soft:#f8e1ec;
   --ochre:#b26b12; --ochre-soft:#f6e7d2; --danger:#b3361f; --danger-soft:#f7ddd6; --ok:#2f7d32; --ok-soft:#dcefdc;
-  --display:"Space Grotesk", "Segoe UI", system-ui, sans-serif;
-  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --display:"Space Grotesk", "Noto Sans Ethiopic", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Noto Sans Ethiopic", "Segoe UI", system-ui, sans-serif;
   --r:12px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -17,6 +18,85 @@
   --bg:#0f1620; --surface:#16202c; --surface-2:#1d2a38; --line:#2c3b4c;
   --fg:#e4ebf2; --muted:#97a6b5; --accent:#7fb0d9; --accent-ink:#0b1c2b; --accent-soft:#1c3247; --pink:#e58ab5; --pink-strong:#e58ab5; --pink-soft:#3a2030;
   --ochre:#e3a14e; --ochre-soft:#3a2a14; --danger:#ef8a72; --danger-soft:#3d1f18; --ok:#7fc883; --ok-soft:#1d3320; color-scheme:dark}
+.afya .rep-tools{display:flex;flex-direction:column;gap:10px}
+.afya .rep-scroll{overflow-x:auto;margin-inline:-4px;padding:4px}
+.afya .rep{background:#fff;color:#1d2733;border-radius:6px;box-shadow:0 1px 6px rgba(0,0,0,.12);padding:28px 30px;font-size:13.5px;line-height:1.5;max-width:794px;margin:0 auto;font-family:"Atkinson Hyperlegible","Noto Sans Ethiopic","Segoe UI",system-ui,sans-serif}
+.afya .rep-head{display:flex;gap:16px;align-items:center;border-bottom:3px solid #194a6f;padding-bottom:12px;margin-bottom:12px;position:relative}
+.afya .rep-head::after{content:"";position:absolute;left:50%;right:0;bottom:-3px;height:3px;background:#d06397}
+.afya .rep-head{justify-content:space-between}
+.afya .rep-surgeon{font-size:1.65rem;font-weight:700;color:#194a6f;line-height:1.15}
+.afya .rep-hosp{color:#5d6b7a;font-size:1rem;margin-top:2px}
+.afya .rep-brand{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;color:#5d6b7a}
+.afya .rep-brand img{height:38px;width:auto}
+.afya .rep-title{font-size:1.1rem;color:#194a6f;margin:4px 0 0}
+.afya .rep-sub{margin:0 0 8px;color:#5d6b7a}
+.afya .rep h2{font-size:.95rem;color:#194a6f;margin:14px 0 4px;text-transform:uppercase;letter-spacing:.03em}
+.afya .rep p{margin:0 0 4px}
+.afya .rep [contenteditable]{border-radius:4px;outline:1px dashed transparent;min-height:1.4em}
+.afya .rep [contenteditable]:hover,.afya .rep [contenteditable]:focus{outline-color:#d06397;background:#fdf5f9}
+.afya .rep table{border-collapse:collapse;width:100%}
+.afya .rep-id th{text-align:left;font-weight:700;color:#5d6b7a;width:34%;padding:3px 8px 3px 0;vertical-align:top}
+.afya .rep-id td{padding:3px 0}
+.afya .rep-id tr{border-bottom:1px solid #e3e8ee}
+.afya .rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:6px 0 8px;align-items:start}
+.afya .rep-t th,.afya .rep-t td{border:1px solid #d5dde6;padding:4px 8px;text-align:left}
+.afya .rep-t thead th{background:#eaf0f6;color:#194a6f}
+.afya .rep-t{table-layout:fixed}
+.afya .rep-t td:first-child{word-break:break-word}
+.afya .rep-t td:last-child{text-align:right;white-space:nowrap;width:30%;font-variant-numeric:tabular-nums}
+.afya .rep-t tr.tot td{font-weight:700;background:#fbeef4}
+.afya .rep-sign{display:flex;gap:12px;align-items:flex-end;margin-top:26px}
+.afya .rep-sign .line{flex:1;border-bottom:1px solid #1d2733;height:28px}
+.afya .rep footer{margin-top:18px;font-size:11px;color:#5d6b7a;border-top:1px solid #e3e8ee;padding-top:6px}
+.afya .rep.capture{width:794px!important;max-width:none;box-shadow:none;border-radius:0;padding:34px 46px}
+.afya .rep.capture [contenteditable]{outline:none;background:none}
+@media(max-width:600px){.afya .rep{padding:18px}.afya .rep-grid{grid-template-columns:1fr}}
+@media print{@page{size:A4;margin:12mm}.afya{background:#fff}.afya .topbar,.afya .tabbar,.afya .demo-banner,.afya .no-print,.afya .toast,.afya::before{display:none!important}.afya main{padding:0!important}.afya .wrap{max-width:none!important;padding:0!important}.afya .rep{box-shadow:none;padding:0;max-width:none}.afya .rep [contenteditable]{outline:none!important;background:none!important}.afya .rep-grid{grid-template-columns:1fr 1fr}}
+.afya .f8scale{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;background:var(--surface-2);border-radius:12px;padding:10px 6px;text-align:center}
+.afya .f8scale>div{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;font-size:.85rem;line-height:1.2}
+.afya .f8scale .n{color:var(--pink-strong);font-weight:700;font-size:1.2rem}
+.afya .f8scale .face{font-size:1.5rem;line-height:1.1}
+.afya .seg label .gl{display:block;line-height:0;margin-bottom:2px}
+.afya .seg label .gl svg{display:inline-block}
+.afya .prog{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden;margin-top:4px}
+.afya .prog i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--pink-strong));border-radius:99px}
+.afya .crit{margin-top:8px}
+.afya .lvl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+.afya .lvl>div{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;opacity:.55}
+.afya .lvl>div span{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);font-weight:700}
+.afya .lvl>div.done,.afya .lvl>div.now{opacity:1}
+.afya .lvl>div.done span{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.afya .lvl>div.now span{border-color:var(--pink-strong);color:var(--pink-strong);box-shadow:0 0 0 4px var(--pink-soft)}
+.afya .lvl small{font-size:.75rem;line-height:1.2}
+.afya .badges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.afya .badge{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;opacity:.55}
+.afya .badge svg{width:24px;height:24px;color:var(--muted)}
+.afya .badge.got{opacity:1;border-color:var(--pink-strong);background:var(--pink-soft)}
+.afya .badge.got svg{color:var(--pink)}
+.afya .badge small{color:var(--muted)}
+.afya table.cmp{width:100%;border-collapse:collapse;font-size:.92rem}
+.afya table.cmp th{text-transform:none;letter-spacing:0;font-size:.85rem;font-weight:700;color:var(--muted);background:none}
+.afya table.cmp th,.afya table.cmp td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+.afya table.cmp td{font-variant-numeric:tabular-nums;white-space:nowrap}
+.afya .pathcta{display:flex;align-items:center;gap:10px;text-align:left;width:100%;cursor:pointer;font:inherit;color:inherit}
+.afya .pathcta .grow{flex:1;min-width:0}
+.afya .net .cotm{margin-top:10px;padding:10px;border-radius:10px;background:var(--surface-2)}
+.afya .notif{border-color:var(--pink-strong)}
+.afya .fbs{display:flex;flex-direction:column;gap:8px}
+.afya .fb{padding:8px 10px;border-radius:10px;background:var(--surface-2);max-width:92%}
+.afya .fb.me{align-self:flex-end;background:var(--accent-soft)}
+.afya .fb.sys{background:none;padding:2px 0;font-weight:700;color:var(--pink)}
+.afya .note.ok{background:var(--accent-soft);color:var(--accent)}
+.afya .note.priv{background:var(--accent-soft);color:var(--fg);border-left:4px solid var(--accent)}
+.afya .rep .note.priv{background:#eaf0f6;color:#1d2733;border-left:4px solid #194a6f;padding:8px 10px;border-radius:6px;font-size:12px}
+.afya .namerow .nameline{display:inline-block;min-width:60%;border-bottom:1px solid #1d2733;min-height:1.3em;vertical-align:bottom}
+.afya .namerow .namehint{display:block;font-size:10px;color:#5d6b7a;font-style:italic}
+.afya .rep.capture .namehint{display:none}
+.afya .poster .qr{display:flex;justify-content:center;margin:18px auto 6px;width:240px;max-width:70%}
+.afya .poster .qr svg{width:100%;height:auto}
+.afya .poster .qr-url{text-align:center;font-size:11px;color:#5d6b7a;word-break:break-all;margin:0 0 10px}
+.afya .poster .steps{margin:4px 0 0;padding-left:22px;font-size:14px;line-height:1.6}
+@media print{.afya .namehint{display:none!important}}
 .afya, .afya *{box-sizing:border-box}
 .afya,.afya{height:100%}
 .afya{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.45}
@@ -32,12 +112,20 @@
 .afya .brand{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:700;font-size:1.05rem}
 .afya .brand-logo{height:34px;width:auto;display:block}
 .afya .brand-name{color:var(--accent)}
+.afya .brand-logo.sm{height:26px}
+.afya .who-block{display:flex;flex-direction:column;line-height:1.1;min-width:0}
+.afya .who-name{font-size:1.15rem;color:var(--accent);white-space:nowrap}
+.afya .who-sub{font-size:.68rem;color:var(--muted);font-weight:400;font-family:var(--body)}
 .afya .brand-name em{font-style:normal;color:var(--pink-strong)}
 .afya .topbar::after{content:"";display:block;height:3px;background:linear-gradient(90deg,var(--accent) 0 50%,var(--pink-strong) 50% 100%)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .brand-logo{background:#fff;border-radius:8px;padding:3px}}
 :root[data-theme="dark"] .brand-logo{background:#fff;border-radius:8px;padding:3px}
 .afya .spacer{flex:1}
 .afya .pill-btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:.85rem}
+.afya .lang-sel{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 6px;font-size:.85rem;height:32px;max-width:7.5rem}
+.afya .lang-sel.short{max-width:4.6rem}
+@media(max-width:480px){.afya .topbar .who{display:none}}
+.afya .rep th{text-transform:none;letter-spacing:0;font-size:inherit}
 .afya .pill-btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .afya .demo-banner{background:var(--ochre-soft);color:var(--ochre);font-size:.82rem}
 .afya .demo-banner .wrap{padding-block:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -72,19 +160,20 @@
 .afya .chip.ok{background:var(--ok-soft);color:var(--ok)}
 .afya .chips{display:flex;gap:6px;flex-wrap:wrap}
 .afya .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-.afya .tabbar .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding-block:6px}
+.afya .tabbar .wrap{display:grid;grid-template-columns:repeat(var(--ntabs,4),minmax(0,1fr));gap:2px;padding-block:6px}
+.afya .tabbar .tab span{font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .afya .tab{background:none;border:none;border-radius:10px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.75rem;color:var(--muted)}
 .afya .tab svg{width:22px;height:22px}
 .afya .tab[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
 .afya .tab.add{color:var(--accent);font-weight:700}
-/* forms */
+
 .afya form{display:flex;flex-direction:column;gap:18px}
 .afya fieldset{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:14px 16px 16px;margin:0;min-width:0;display:flex;flex-direction:column;gap:14px}
 .afya legend{font-family:var(--display);font-weight:700;padding:0 6px;font-size:1rem}
 .afya .field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .afya .field>label,.afya .field>.lab{font-weight:700;font-size:.92rem}
 .afya .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.afya input[type=text],.afya input[type=number],.afya input[type=date],.afya input[type=email],.afya input[type=password],.afya select,.afya textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:11px 12px;min-height:46px}
+.afya input[type=text],.afya input[type=number],.afya input[type=date],.afya input[type=email],.afya input[type=tel],.afya input[type=password],.afya select,.afya textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:11px 12px;min-height:46px}
 .afya textarea{min-height:70px;resize:vertical}
 .afya .seg{display:flex;flex-wrap:wrap;gap:6px}
 .afya .seg input{position:absolute;opacity:0;pointer-events:none}
@@ -115,7 +204,7 @@
 .afya .savebar{position:sticky;bottom:calc(70px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;background:var(--bg);padding-block:10px}
 .afya .switch{display:flex;align-items:center;gap:10px;font-weight:700}
 .afya .switch input{width:22px;height:22px;accent-color:var(--danger)}
-/* timeline */
+
 .afya .tl{display:flex;flex-direction:column;gap:10px}
 .afya .tp{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--surface);display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
 .afya .tp .dot{width:12px;height:12px;border-radius:50%;background:var(--line)}
@@ -145,3 +234,4 @@
 .afya .back{background:none;border:none;color:var(--accent);font-weight:700;padding:0;align-self:flex-start}
 .afya .empty{color:var(--muted);font-size:.9rem;padding:8px 0}
 @media (prefers-reduced-motion:no-preference){.afya .card,.afya .kpi{transition:border-color .15s}}
+

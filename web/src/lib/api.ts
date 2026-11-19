@@ -2,7 +2,7 @@
 // L'interface de cet objet `api` est restée celle de l'ancien serveur, pour que les écrans ne
 // changent pas : seules les implémentations passent par Supabase.
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js';
-import type { AdminPasswordResult, AdminUser, AuthOptions, CarnetView, LoginStep, MeView, Participant, Patient, Section, TotpSetup } from './contract.ts';
+import type { AdminPasswordResult, AdminUser, AuthOptions, CarnetView, GroupView, LoginStep, MeView, Participant, Patient, Section, TotpSetup, Workshop } from './contract.ts';
 
 export type { AdminPasswordResult, AdminUser, MeView, Section } from './contract.ts';
 
@@ -218,26 +218,96 @@ export const api = {
     const p = await profile();
     if (p.must_change_password) throw new ApiError(403, 'password_change_required', 'Choisissez votre mot de passe avant de consulter le carnet.');
     const trainer = p.sections.includes('formateur') || p.is_admin;
-    const { data: parts, error: e1 } = await supabase.from('participants').select('id, name, country, site, user_id').order('id');
-    if (e1) throw network();
-    let participant: Participant | null = null;
-    if (!trainer) {
-      const mine = p.sections.includes('participant') ? parts?.find((x) => x.user_id === p.id) : undefined;
-      if (!mine) {
-        throw p.sections.includes('participant')
-          ? new ApiError(403, 'no_participant', "Ce compte n'est pas encore rattaché à un identifiant AFYA. Contactez un formateur.")
-          : new ApiError(403, 'no_section', "Aucun accès au carnet n'est ouvert pour ce compte.");
-      }
-      participant = { id: mine.id, name: mine.name, country: mine.country, site: mine.site };
+    const [r1, r2, r3, group] = await Promise.all([
+      supabase.from('participants').select('id, name, country, site, user_id, first_name, last_name, specialty, ws, code_key').order('id'),
+      supabase.from('patients').select('data'),
+      supabase.from('workshops').select('id, place, date, active').order('date', { ascending: false }),
+      call<GroupView>({ action: 'group' }).catch(() => null),
+    ]);
+    if (r1.error || r2.error || r3.error) throw network();
+    const rows = (r1.data ?? []) as {
+      id: string; name: string; country: string; site: string; user_id: string | null; first_name: string | null;
+      last_name: string | null; specialty: string | null; ws: { date: string; place: string } | null; code_key: string | null;
+    }[];
+    const parts: Participant[] = rows.map((x) => ({
+      id: x.id,
+      name: x.name,
+      country: x.country,
+      site: x.site,
+      // Le numéro des patientes suit la clé gardée sur le serveur (nom normalisé, chiffre en cas d'homonyme).
+      last: x.code_key ?? x.last_name ?? '',
+      first: x.first_name ?? undefined,
+      specialty: x.specialty,
+      ws: x.ws,
+      registered: true,
+    }));
+    const workshops = (r3.data ?? []) as Workshop[];
+    const patients = (r2.data ?? []).map((r) => r.data as Patient).sort((a, b) => b.date.localeCompare(a.date) || b.code.localeCompare(a.code));
+    if (trainer) return { role: 'trainer', participant: null, participants: parts, patients, workshops, group };
+    const mine = p.sections.includes('participant') ? rows.find((x) => x.user_id === p.id) : undefined;
+    if (!mine) {
+      throw p.sections.includes('participant')
+        ? new ApiError(403, 'no_participant', "Ce compte n'est pas encore rattaché à un identifiant AFYA. Contactez un formateur.")
+        : new ApiError(403, 'no_section', "Aucun accès au carnet n'est ouvert pour ce compte.");
     }
-    const { data: rows, error: e2 } = await supabase.from('patients').select('data');
-    if (e2) throw network();
-    const patients = (rows ?? []).map((r) => r.data as Patient).sort((a, b) => b.date.localeCompare(a.date) || b.code.localeCompare(a.code));
-    const participants = (parts ?? []).map(({ id, name, country, site }) => ({ id, name, country, site }));
-    return trainer
-      ? { role: 'trainer', participant: null, participants, patients }
-      : { role: 'part', participant, participants: [participant!], patients };
+    const participant = parts.find((x) => x.id === mine.id)!;
+    return { role: 'part', participant, participants: [participant], patients, workshops, group };
   },
 
   savePatient: (code: string, p: unknown) => call<Patient>({ action: 'save', code, patient: p }),
+  feedback: (code: string, kind: string, text: string) => call<Patient>({ action: 'feedback', code, kind, text }),
+  readFeedback: (code: string) => call<Patient>({ action: 'read_feedback', code }),
+
+  /** Ateliers, lisibles sans compte : ceux ouverts à l'inscription, ou tous (équipe). */
+  async workshops(all = false): Promise<Workshop[]> {
+    let q = supabase.from('workshops').select('id, place, date, active');
+    if (!all) q = q.eq('active', true);
+    const { data, error } = await q.order('date', { ascending: false });
+    if (error) throw network();
+    return (data ?? []) as Workshop[];
+  },
+  /** Demande d'inscription par le lien ou le QR code d'un atelier : sans compte, validée ensuite par un administrateur. */
+  register: (r: object) => call<{ ok: true }>({ ...r, action: 'register' }),
+
+  // Équipe pédagogique (administrateurs).
+  adminRegistrations: () => call<Registration[]>({ action: 'registrations' }),
+  adminAcceptRegistration: (id: string) => call<AcceptResult>({ action: 'accept_registration', id }),
+  adminRejectRegistration: (id: string) => call<{ ok: true }>({ action: 'reject_registration', id }),
+  adminParticipants: () => call<ParticipantRow[]>({ action: 'participants' }),
+  adminSetWs: (id: string, ws: { date: string; place: string } | null) => call<{ ok: true }>({ action: 'set_ws', id, ws }),
+  adminSaveWorkshop: (w: Workshop) => call<{ ok: true }>({ action: 'save_workshop', ...w }),
 };
+
+export interface Registration {
+  id: string;
+  created_at: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  country: string;
+  hospital: string;
+  specialty: string;
+  workshop_id: string | null;
+}
+
+export interface AcceptResult {
+  user: AdminUser;
+  temporaryPassword: string;
+  participantId: string;
+  codePrefix: string;
+}
+
+export interface ParticipantRow {
+  id: string;
+  name: string;
+  country: string;
+  site: string;
+  email: string | null;
+  phone: string | null;
+  specialty: string | null;
+  workshop_id: string | null;
+  ws: { date: string; place: string } | null;
+  code_key: string | null;
+  user_id: string | null;
+}

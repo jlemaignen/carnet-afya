@@ -5,7 +5,8 @@
 // Déploiement : Supabase, Edge Functions, « Deploy a new function », « Via Editor », nom carnet-api,
 // coller le fichier supabase/carnet-api.bundle.ts (généré par scripts/bundle-function.mjs).
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { InvalidPatient, cleanPatient, isCodeOf } from './rules.ts';
+import { InvalidPatient, cleanPatient, cleanRegistration, isCodeOf, newFb, normName } from './rules.ts';
+import { groupView } from './group.ts';
 
 const SECTIONS = ['participant', 'formateur'] as const;
 type Section = (typeof SECTIONS)[number];
@@ -83,17 +84,17 @@ async function log(userId: string | null, kind: string, detail?: string) {
 // ── Fiches ─────────────────────────────────────────────────────────────────
 
 async function savePatient(me: Profile, code: string, input: unknown) {
-  if (!me.sections.includes('participant')) {
-    throw new Refus(403, 'read_only', 'Les formateurs consultent le carnet sans le modifier.');
+  const part = await myParticipant(me);
+  if (typeof code !== 'string' || !isCodeOf(code, { country: part.country, last: part.key })) {
+    throw new Refus(403, 'not_yours', "Ce code n'appartient pas à votre carnet.");
   }
-  const { data: part } = await admin.from('participants').select('id').eq('user_id', me.id).maybeSingle();
-  if (!part) throw new Refus(403, 'no_participant', "Ce compte n'est pas encore rattaché à un identifiant AFYA. Contactez un formateur.");
-  if (typeof code !== 'string' || !isCodeOf(code, part.id)) throw new Refus(403, 'not_yours', "Ce code n'appartient pas à votre carnet.");
-  const { data: existing } = await admin.from('patients').select('participant_id').eq('code', code).maybeSingle();
+  const { data: existing } = await admin.from('patients').select('participant_id, data').eq('code', code).maybeSingle();
   if (existing && existing.participant_id !== part.id) throw new Refus(403, 'not_yours', "Cette fiche n'appartient pas à votre carnet.");
   let patient;
   try {
     patient = cleanPatient(input, code, part.id);
+    // Les échanges avec le formateur restent ceux de la base, jamais ceux envoyés par le navigateur.
+    patient.fb = ((existing?.data as { fb?: typeof patient.fb } | undefined)?.fb) ?? [];
   } catch (e) {
     if (e instanceof InvalidPatient) throw new Refus(400, 'invalid', e.message);
     throw e;
@@ -104,6 +105,93 @@ async function savePatient(me: Profile, code: string, input: unknown) {
   if (error) throw new Error(error.message);
   await log(me.id, existing ? 'patient_update' : 'patient_create', code);
   return patient;
+}
+
+/** Participant rattaché au compte, avec la clé du numéro de ses patientes (ETH_GIRMA). */
+async function myParticipant(me: Profile) {
+  if (!me.sections.includes('participant')) throw new Refus(403, 'read_only', 'Les formateurs consultent le carnet sans le modifier.');
+  const { data: part } = await admin.from('participants').select('id, country, code_key, last_name, name').eq('user_id', me.id).maybeSingle();
+  if (!part) throw new Refus(403, 'no_participant', "Ce compte n'est pas encore rattaché à un identifiant AFYA. Contactez un formateur.");
+  const key = part.code_key || normName(part.last_name || String(part.name).trim().split(/\s+/).pop() || '');
+  return { id: part.id as string, country: part.country as string, key };
+}
+
+const isTrainer = (me: Profile) => me.sections.includes('formateur') || me.is_admin;
+
+/** Jour à Genève (AAAA-MM-JJ). */
+const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Zurich' }).format(new Date());
+
+type Row = { code: string; participant_id: string; data: Record<string, unknown> & { fb?: { from: string; read: boolean }[] } };
+
+async function loadPatient(code: unknown): Promise<Row> {
+  const { data } = await admin.from('patients').select('code, participant_id, data').eq('code', String(code ?? '')).maybeSingle();
+  if (!data) throw new Refus(404, 'not_found', 'Fiche introuvable.');
+  return data as Row;
+}
+
+/** Message, validation ou félicitations sur un cas. Le participant n'écrit que sur ses fiches. */
+async function feedback(me: Profile, body: Record<string, unknown>) {
+  const row = await loadPatient(body.code);
+  const trainer = isTrainer(me);
+  if (!trainer) {
+    const part = await myParticipant(me);
+    if (row.participant_id !== part.id) throw new Refus(403, 'not_yours', "Cette fiche n'appartient pas à votre carnet.");
+  }
+  let fb;
+  try {
+    fb = newFb(trainer ? 'trainer' : 'part', body.kind, body.text, today());
+  } catch (e) {
+    if (e instanceof InvalidPatient) throw new Refus(400, 'invalid', e.message);
+    throw e;
+  }
+  const data = { ...row.data, fb: [...(row.data.fb ?? []), fb] };
+  await admin.from('patients').update({ data, updated_at: new Date().toISOString(), updated_by: me.id }).eq('code', row.code);
+  await log(me.id, 'feedback_' + fb.kind, row.code);
+  return data;
+}
+
+/** Le participant a lu les messages du formateur sur ce cas. */
+async function readFeedback(me: Profile, code: unknown) {
+  const part = await myParticipant(me);
+  const row = await loadPatient(code);
+  if (row.participant_id !== part.id) throw new Refus(403, 'not_yours', "Cette fiche n'appartient pas à votre carnet.");
+  const data = { ...row.data, fb: (row.data.fb ?? []).map((m) => (m.from === 'trainer' ? { ...m, read: true } : m)) };
+  await admin.from('patients').update({ data }).eq('code', row.code);
+  return data;
+}
+
+/** Comparaison avec le groupe et réseau AFYA : moyennes et comptes seulement. */
+async function group() {
+  const [{ data: rows }, { data: parts }] = await Promise.all([
+    admin.from('patients').select('data'),
+    admin.from('participants').select('id, name, country'),
+  ]);
+  return groupView((rows ?? []).map((r) => r.data), parts ?? [], new Date());
+}
+
+// ── Inscription par le lien ou le QR code d'un atelier (sans compte) ───────────
+
+async function register(body: Record<string, unknown>) {
+  let r;
+  try {
+    r = cleanRegistration(body);
+  } catch (e) {
+    if (e instanceof InvalidPatient) throw new Refus(400, 'invalid', e.message);
+    throw e;
+  }
+  if (r.workshop_id) {
+    const { data: w } = await admin.from('workshops').select('id').eq('id', r.workshop_id).maybeSingle();
+    if (!w) r.workshop_id = null;
+  }
+  // Une seule demande en attente par adresse ; garde-fou contre les envois en masse.
+  const { data: dup } = await admin.from('registrations').select('id').eq('email', r.email).eq('status', 'pending').maybeSingle();
+  if (dup) return { ok: true };
+  const since = new Date(Date.now() - 3600_000).toISOString();
+  const { count } = await admin.from('registrations').select('id', { count: 'exact', head: true }).gte('created_at', since);
+  if ((count ?? 0) >= 40) throw new Refus(429, 'rate_limited', 'Trop de demandes en ce moment. Réessayez plus tard.');
+  await admin.from('registrations').insert(r);
+  await log(null, 'registration', `${r.country} ${r.email}`);
+  return { ok: true };
 }
 
 // ── Comptes (administrateurs, session confirmée par l'application d'authentification) ──
@@ -209,6 +297,67 @@ async function adminAction(me: Profile, body: Record<string, unknown>) {
       const { data: p } = await admin.from('profiles').select('*').eq('id', u.id).single();
       return view(p as Profile);
     }
+    case 'registrations': {
+      const { data } = await admin.from('registrations').select('*').eq('status', 'pending').order('created_at');
+      return data ?? [];
+    }
+    case 'reject_registration': {
+      await admin.from('registrations').update({ status: 'rejected', handled_by: me.id, handled_at: new Date().toISOString() })
+        .eq('id', String(body.id)).eq('status', 'pending');
+      await log(me.id, 'registration_rejected', String(body.id));
+      return { ok: true };
+    }
+    case 'accept_registration': {
+      const { data: r } = await admin.from('registrations').select('*').eq('id', String(body.id)).eq('status', 'pending').maybeSingle();
+      if (!r) throw new Refus(404, 'not_found', 'Demande introuvable ou déjà traitée.');
+      const name = `Dr ${String(r.first_name).charAt(0).toUpperCase()}. ${r.last_name}`;
+      // Identifiant AFYA : pays, année, numéro d'ordre dans ce pays et cette année.
+      const year = today().slice(0, 4);
+      const { data: same } = await admin.from('participants').select('id, code_key').eq('country', r.country);
+      const n = (same ?? []).filter((p) => p.id.includes(`/ ${year} /`)).reduce((m, p) => Math.max(m, Number(p.id.split('/').pop()) || 0), 0) + 1;
+      const id = `AFYA / ${r.country} / ${year} / ${String(n).padStart(2, '0')}`;
+      // Clé du numéro des patientes : le nom, avec un chiffre si un confrère du pays porte le même.
+      const base = normName(r.last_name);
+      let key = base;
+      for (let i = 2; (same ?? []).some((p) => p.code_key === key); i++) key = base + i;
+      const password = temporaryPassword();
+      const { data: u, error } = await admin.auth.admin.createUser({ email: r.email, password, email_confirm: true, user_metadata: { display_name: name } });
+      if (error || !u.user) throw new Refus(409, 'exists', error?.message.includes('already') ? 'Un compte existe déjà pour cette adresse.' : (error?.message ?? 'Création impossible.'));
+      await admin.from('profiles').upsert({ id: u.user.id, email: r.email, display_name: name, sections: ['participant'], must_change_password: true });
+      const { error: e2 } = await admin.from('participants').insert({
+        id, name, country: r.country, site: r.hospital, user_id: u.user.id, first_name: r.first_name, last_name: r.last_name,
+        email: r.email, phone: r.phone, specialty: r.specialty, workshop_id: r.workshop_id, code_key: key,
+      });
+      if (e2) throw new Error(e2.message);
+      await admin.from('registrations').update({ status: 'accepted', handled_by: me.id, handled_at: new Date().toISOString() }).eq('id', r.id);
+      await log(me.id, 'registration_accepted', `${r.email} : ${id}`);
+      const { data: p } = await admin.from('profiles').select('*').eq('id', u.user.id).single();
+      return { user: await view(p as Profile), temporaryPassword: password, participantId: id, codePrefix: `${r.country}_${key}` };
+    }
+    case 'participants': {
+      const { data } = await admin.from('participants')
+        .select('id, name, country, site, email, phone, specialty, workshop_id, ws, code_key, user_id').order('id');
+      return data ?? [];
+    }
+    case 'set_ws': {
+      const ws = body.ws == null ? null : (body.ws as Record<string, unknown>);
+      if (ws && (!/^\d{4}-\d{2}$/.test(String(ws.date)) || !String(ws.place ?? '').trim())) {
+        throw new Refus(400, 'validation', "Indiquez le mois et le lieu de l'atelier.");
+      }
+      const value = ws ? { date: String(ws.date), place: String(ws.place).trim().slice(0, 80) } : null;
+      await admin.from('participants').update({ ws: value }).eq('id', String(body.id));
+      await log(me.id, value ? 'ws_certified' : 'ws_removed', String(body.id));
+      return { ok: true };
+    }
+    case 'save_workshop': {
+      const id = String(body.id ?? '').trim().toLowerCase();
+      if (!/^[a-z0-9-]{3,60}$/.test(id) || !/^\d{4}-\d{2}$/.test(String(body.date)) || !String(body.place ?? '').trim()) {
+        throw new Refus(400, 'validation', 'Atelier : identifiant (lettres, chiffres, tirets), lieu et mois requis.');
+      }
+      await admin.from('workshops').upsert({ id, place: String(body.place).trim().slice(0, 80), date: String(body.date), active: body.active !== false });
+      await log(me.id, 'workshop_saved', id);
+      return { ok: true };
+    }
     default:
       throw new Refus(400, 'validation', 'Action inconnue.');
   }
@@ -221,8 +370,12 @@ Deno.serve(async (req) => {
     const raw = await req.text();
     if (raw.length > 64 * 1024) throw new Refus(413, 'too_large', 'Fiche trop volumineuse.');
     const body = JSON.parse(raw || '{}') as Record<string, unknown>;
+    if (body.action === 'register') return json(await register(body));
     const { profile, jwt } = await caller(req);
     if (body.action === 'save') return json(await savePatient(profile, String(body.code ?? ''), body.patient));
+    if (body.action === 'feedback') return json(await feedback(profile, body));
+    if (body.action === 'read_feedback') return json(await readFeedback(profile, body.code));
+    if (body.action === 'group') return json(await group());
     requireAdmin(profile, jwt);
     return json(await adminAction(profile, body));
   } catch (e) {

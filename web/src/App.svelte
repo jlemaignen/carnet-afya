@@ -3,6 +3,7 @@
   import Brand from './components/Brand.svelte';
   import ChangePassword from './components/ChangePassword.svelte';
   import Carnet from './components/Carnet.svelte';
+  import Inscription from './components/Inscription.svelte';
   import Login from './components/Login.svelte';
   import ResetPassword from './components/ResetPassword.svelte';
 
@@ -12,6 +13,18 @@
   onPasswordRecovery(() => (recuperation = true));
 
   let me = $state<MeView | null>(null);
+
+  // Lien ou QR code d'atelier (#invite-<atelier>) : page d'inscription, sans compte.
+  const lienInvite = () => /^#invite-([a-z0-9-]{1,60})$/.exec(location.hash)?.[1] ?? null;
+  let invite = $state<string | null>(lienInvite());
+  function versConnexion() {
+    invite = null;
+    try {
+      history.replaceState(null, '', location.pathname + location.search);
+    } catch {
+      /* adresse laissée telle quelle */
+    }
+  }
   let loading = $state(true);
 
   setUnauthorizedHandler(() => (me = null));
@@ -43,6 +56,8 @@
   </div>
 {:else if me}
   <Carnet {me} onLogout={logout} onMe={(m) => (me = m)} />
+{:else if invite !== null}
+  <Inscription {invite} onLogin={versConnexion} />
 {:else}
   <Login onLogin={(m) => (me = m)} />
 {/if}

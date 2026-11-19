@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import { api, ApiError, type MeView } from '../lib/api.ts';
   import Admin from './Admin.svelte';
+  import Equipe from './Equipe.svelte';
   import Security from './Security.svelte';
   import { startCarnet } from '../carnet/engine.js';
   import '../carnet/carnet.css';
@@ -10,12 +11,13 @@
 
   let securite = $state(false);
   let comptes = $state(false);
+  let equipe = $state(false);
   let error = $state('');
   let root = $state<HTMLElement | null>(null);
   let stop: (() => void) | null = null;
 
   // Le moteur du prototype dessine lui-même ses écrans dans root ; Svelte garde la session,
-  // la sécurité et les comptes (composants du socle).
+  // la sécurité, les comptes et l'équipe (composants du socle).
   async function charger(el: HTMLElement) {
     try {
       const view = await api.carnet();
@@ -24,9 +26,14 @@
         isAdmin: me.isAdmin,
         notice: me.totpEnabled ? '' : "Protégez votre compte : activez l'application d'authentification (bouton Sécurité).",
         save: (p: { code: string }) => api.savePatient(p.code, p),
+        feedback: (code, kind, text) => api.feedback(code, kind, text),
+        readFeedback: (code) => api.readFeedback(code),
+        register: () => Promise.reject(new Error('')),
         onLogout,
         onSecurity: () => (securite = true),
-        onAdmin: () => (comptes = true),
+        onAdmin: () => ((comptes = true), (equipe = false)),
+        onTeam: () => ((equipe = true), (comptes = false)),
+        onLogin: () => {},
       });
     } catch (err) {
       error = err instanceof ApiError ? err.message : 'Une erreur est survenue.';
@@ -55,6 +62,9 @@
 {/if}
 {#if comptes && me.isAdmin}
   <Admin {me} onClose={() => (comptes = false)} onSecurite={() => { comptes = false; securite = true; }} />
+{/if}
+{#if equipe && me.isAdmin}
+  <Equipe onClose={() => (equipe = false)} onSecurite={() => { equipe = false; securite = true; }} />
 {/if}
 
 <style>

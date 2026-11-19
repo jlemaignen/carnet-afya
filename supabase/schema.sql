@@ -134,3 +134,65 @@ revoke all on public.events from anon, authenticated;
 grant execute on function public.is_active(), public.is_trainer(), public.my_participant_id(), public.password_changed() to authenticated;
 revoke execute on function public.password_changed() from anon;
 grant execute on function public.ping() to anon, authenticated;
+
+-- ══ Version 2 (prototype de Lionel, 19.11.2026) : ateliers, inscriptions, participants enrichis ══
+
+-- Ateliers AFYA : le lien et le QR code d'inscription portent l'identifiant de l'atelier.
+create table if not exists public.workshops (
+  id text primary key check (id ~ '^[a-z0-9-]{3,60}$'),   -- ex. mwanza-2026-11
+  place text not null,
+  date text not null check (date ~ '^\d{4}-\d{2}$'),      -- mois de l'atelier
+  active boolean not null default true                  -- proposé à l'inscription
+);
+
+-- Participants : identité professionnelle (jamais celle des patientes), certification d'atelier.
+alter table public.participants add column if not exists first_name text not null default '';
+alter table public.participants add column if not exists last_name text not null default '';
+alter table public.participants add column if not exists email text;
+alter table public.participants add column if not exists phone text;
+alter table public.participants add column if not exists specialty text;
+alter table public.participants add column if not exists workshop_id text references public.workshops (id) on delete set null;
+-- Certification de l'atelier, saisie par l'équipe pédagogique : {"date":"2026-11","place":"Mwanza"}.
+alter table public.participants add column if not exists ws jsonb;
+
+-- Demandes d'inscription (lien ou QR code d'atelier), validées par un administrateur.
+create table if not exists public.registrations (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  first_name text not null,
+  last_name text not null,
+  email text not null,
+  phone text not null default '',
+  country text not null,
+  hospital text not null,
+  specialty text not null,
+  workshop_id text references public.workshops (id) on delete set null,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'rejected')),
+  handled_by uuid references public.profiles (id) on delete set null,
+  handled_at timestamptz
+);
+create index if not exists registrations_status on public.registrations (status, created_at);
+
+alter table public.workshops enable row level security;
+alter table public.registrations enable row level security;
+
+-- Les ateliers sont publics (formulaire d'inscription, affiche) ; les demandes ne sont lues que
+-- par la fonction carnet-api.
+drop policy if exists "ateliers publics" on public.workshops;
+create policy "ateliers publics" on public.workshops for select to anon, authenticated using (true);
+grant usage on schema public to anon;
+grant select on public.workshops to anon, authenticated;
+revoke insert, update, delete on public.workshops from anon, authenticated;
+revoke all on public.registrations from anon, authenticated;
+
+-- Premier atelier, à compléter ou corriger dans l'app (Comptes, Ateliers).
+insert into public.workshops (id, place, date) values
+  ('mwanza-2026-11', 'Mwanza', '2026-11'),
+  ('addis-2026-10', 'Addis-Abeba', '2026-10'),
+  ('kinshasa-2026-04', 'Kinshasa', '2026-04')
+on conflict (id) do nothing;
+
+-- Clé du numéro des patientes (ETH_GIRMA_001) : le nom sans accents, figé à l'inscription. Deux
+-- praticiens du même pays et du même nom : le second reçoit GIRMA2.
+alter table public.participants add column if not exists code_key text;
+create unique index if not exists participants_code_key on public.participants (country, code_key);
