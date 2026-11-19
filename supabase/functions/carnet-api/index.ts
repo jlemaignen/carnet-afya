@@ -70,7 +70,10 @@ function aal(jwt: string): string {
 async function caller(req: Request): Promise<{ profile: Profile; jwt: string }> {
   const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
   const { data, error } = await admin.auth.getUser(jwt);
-  if (error || !data.user) throw new Refus(401, 'no_session', 'Veuillez vous connecter.');
+  if (error || !data.user) {
+    if (jwt) console.error('session refusée : ' + (error?.message ?? 'utilisateur introuvable'));
+    throw new Refus(401, 'no_session', 'Veuillez vous connecter.');
+  }
   const { data: profile } = await admin.from('profiles').select('*').eq('id', data.user.id).single();
   if (!profile || profile.disabled) throw new Refus(401, 'no_session', 'Veuillez vous connecter.');
   if (profile.must_change_password) throw new Refus(403, 'password_change_required', "Choisissez d'abord votre mot de passe.");

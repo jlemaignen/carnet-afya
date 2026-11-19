@@ -91,7 +91,8 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
   if (error instanceof FunctionsHttpError) {
     const res = error.context as Response;
     const j = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-    if (res.status === 401) onUnauthorized();
+    // Retour à la connexion seulement si la session a vraiment disparu ; sinon le refus s'affiche.
+    if (res.status === 401 && !(await supabase.auth.getSession()).data.session) onUnauthorized();
     throw new ApiError(res.status, j.error ?? 'unknown', j.message ?? 'Une erreur est survenue.');
   }
   throw network();
