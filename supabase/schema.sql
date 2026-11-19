@@ -196,3 +196,9 @@ on conflict (id) do nothing;
 -- praticiens du même pays et du même nom : le second reçoit GIRMA2.
 alter table public.participants add column if not exists code_key text;
 create unique index if not exists participants_code_key on public.participants (country, code_key);
+
+-- Clé de service (fonction carnet-api) : les projets récents ne lui accordent plus les tables par
+-- défaut, d'où « permission denied for table profiles ». Elle seule écrit, après vérification.
+grant usage on schema public to service_role;
+grant select, insert, update, delete on all tables in schema public to service_role;
+grant usage, select on all sequences in schema public to service_role;
