@@ -1,4 +1,4 @@
-// Contrat entre le serveur et le front. Aucune donnée patient ne transite par cette app.
+// Contrat partagé entre l'interface et la fonction Supabase carnet-api.
 
 /**
  * Rôles du carnet, ouverts compte par compte (filtrage sur le serveur) :
@@ -82,7 +82,7 @@ export interface MeView {
 
 /** Un compte vu par un administrateur. Jamais de mot de passe ni de secret. */
 export interface AdminUser {
-  id: number;
+  id: string;
   email: string;
   displayName: string;
   sections: Section[];

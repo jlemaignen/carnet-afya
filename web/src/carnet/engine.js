@@ -5,7 +5,7 @@
 
 /**
  * @param {HTMLElement} root
- * @param {{ view: import('../../../server/src/contract.ts').CarnetView, isAdmin: boolean, notice?: string,
+ * @param {{ view: import('../lib/contract.ts').CarnetView, isAdmin: boolean, notice?: string,
  *   save: (p: object) => Promise<object>, onLogout: () => void, onSecurity: () => void, onAdmin: () => void }} opts
  */
 export function startCarnet(root, opts) {

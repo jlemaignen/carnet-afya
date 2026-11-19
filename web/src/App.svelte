@@ -1,24 +1,15 @@
 <script lang="ts">
-  import { api, setUnauthorizedHandler, type MeView } from './lib/api.ts';
+  import { api, onPasswordRecovery, setUnauthorizedHandler, type MeView } from './lib/api.ts';
   import Brand from './components/Brand.svelte';
   import ChangePassword from './components/ChangePassword.svelte';
   import Carnet from './components/Carnet.svelte';
   import Login from './components/Login.svelte';
   import ResetPassword from './components/ResetPassword.svelte';
 
-  // Lien « Mot de passe oublié » : le jeton arrive après le #, on le retire aussitôt de la barre
-  // d'adresse (historique, partage d'écran).
-  let resetToken = $state<string | null>(null);
-  function lireLien() {
-    const m = location.hash.match(/^#reinitialisation=([A-Za-z0-9_-]{20,100})$/);
-    if (m) {
-      resetToken = m[1];
-      history.replaceState(null, '', location.pathname + location.search);
-    }
-  }
-  lireLien();
-  // Lien ouvert alors que l'app est déjà affichée dans cet onglet : seule la fin de l'adresse change.
-  window.addEventListener('hashchange', lireLien);
+  // Lien « Mot de passe oublié » reçu par e-mail : Supabase ouvre une session de récupération et
+  // retire le jeton de la barre d'adresse ; on affiche alors le choix du nouveau mot de passe.
+  let recuperation = $state(false);
+  onPasswordRecovery(() => (recuperation = true));
 
   let me = $state<MeView | null>(null);
   let loading = $state(true);
@@ -37,8 +28,8 @@
   }
 </script>
 
-{#if resetToken}
-  <ResetPassword token={resetToken} onDone={() => (resetToken = null)} />
+{#if recuperation}
+  <ResetPassword token="" onDone={() => { recuperation = false; me = null; }} />
 {:else if loading}
   <div class="center" aria-busy="true"><Brand height={34} /></div>
 {:else if me && me.mustChangePassword}

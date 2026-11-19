@@ -1,4 +1,4 @@
-import type { CarnetView } from '../../../server/src/contract.ts';
+import type { CarnetView } from '../lib/contract.ts';
 export function startCarnet(
   root: HTMLElement,
   opts: {

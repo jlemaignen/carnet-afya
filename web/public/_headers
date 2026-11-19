@@ -1,0 +1,12 @@
+# En-têtes de sécurité servis par Cloudflare Pages (l'ancien serveur les envoyait lui-même).
+# Seule ressource externe : le projet Supabase (base, comptes, fonction carnet-api).
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://bvnnpqubzkxiizhinyuy.supabase.co wss://bvnnpqubzkxiizhinyuy.supabase.co; frame-ancestors 'none'; form-action 'self'; base-uri 'self'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/index.html
+  Cache-Control: no-store

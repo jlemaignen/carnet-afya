@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SECTIONS, SECTION_LABELS } from '../../../server/src/contract.ts';
+  import { SECTIONS, SECTION_LABELS } from '../lib/contract.ts';
   import { api, ApiError, type AdminUser, type MeView, type Section } from '../lib/api.ts';
 
   let { me, onClose, onSecurite }: { me: MeView; onClose: () => void; onSecurite: () => void } = $props();
@@ -17,7 +17,7 @@
   let email = $state('');
   let nom = $state('');
   let choix = $state<Section[]>([]);
-  let edition = $state<{ id: number; sections: Section[] } | null>(null);
+  let edition = $state<{ id: string; sections: Section[] } | null>(null);
   // Changement de rôle en attente du code de l'application d'authentification.
   let role = $state<{ user: AdminUser; admin: boolean; code: string } | null>(null);
 

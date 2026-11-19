@@ -1,6 +1,6 @@
 // Règles du carnet : validation d'une fiche patiente reçue du navigateur. Tout ce qui n'est pas
 // prévu ici est écarté, pour qu'aucun champ libre ne serve à saisir une identité.
-import { TIMEPOINTS, type Complication, type Patient, type Visit } from './contract.ts';
+import { TIMEPOINTS, type Complication, type Patient, type Visit } from '../../../web/src/lib/contract.ts';
 
 export const TYPES = ['SP', 'RVF', 'BOTH'] as const;
 export const ORIGINS = ['obst', 'trauma', 'sv', 'cong', 'other'] as const;

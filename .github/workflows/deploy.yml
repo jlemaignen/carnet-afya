@@ -1,18 +1,13 @@
-# Chaque push sur main : tests, puis la branche "production" avance et le serveur AWS se met à jour.
-# Une pull request ne lance que les tests.
-name: Tests et déploiement
+# Chaque push : règles du carnet testées, front vérifié et construit. Cloudflare Pages construit et
+# met en ligne lui-même la branche main ; la fonction Supabase se redéploie à la main (README).
+name: Tests
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 permissions:
   contents: read
-
-concurrency:
-  group: production
-  cancel-in-progress: false
 
 jobs:
   tests:
@@ -22,22 +17,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Serveur (types et tests)
-        working-directory: server
-        run: npm ci && npm run typecheck && npm test
+      - name: Règles du carnet (fonction carnet-api)
+        run: node --test supabase/functions/carnet-api/rules.test.ts
       - name: Front (types et build)
         working-directory: web
         run: npm ci && npm run check && npm run build
-
-  # Les tests ont réussi : on avance la branche "production". Le serveur AWS la surveille et se met
-  # à jour tout seul (deploy/server/poll-deploy.sh) ; GitHub ne se connecte jamais au serveur.
-  production:
-    needs: tests
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Marquer cette version comme bonne pour la production
-        run: git push --force origin "HEAD:refs/heads/production"
