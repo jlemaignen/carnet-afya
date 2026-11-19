@@ -174,7 +174,24 @@ export function cleanPatient(input: unknown, code: string, participantId: string
 const SECTIONS = ['participant', 'formateur'] as const;
 type Section = (typeof SECTIONS)[number];
 
-const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
+/**
+ * Clé de service : ancien nom (SUPABASE_SERVICE_ROLE_KEY) ou nouvelles clés secrètes
+ * (SUPABASE_SECRET_KEYS, objet JSON {nom: clé}), selon l'âge du projet.
+ */
+function serviceKey(): string {
+  const legacy = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (legacy) return legacy;
+  try {
+    const keys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}') as Record<string, string>;
+    const first = keys.default ?? Object.values(keys)[0];
+    if (first) return first;
+  } catch {
+    /* format inattendu : erreur claire ci-dessous */
+  }
+  throw new Error('clé de service introuvable (SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_SECRET_KEYS)');
+}
+
+const admin = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey(), {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 

@@ -121,6 +121,11 @@ drop policy if exists "fiches visibles" on public.patients;
 create policy "fiches visibles" on public.patients for select to authenticated
   using (public.is_trainer() or participant_id = public.my_participant_id());
 
+-- Lecture pour les comptes connectés seulement ; les règles ci-dessus filtrent ligne par ligne.
+-- (Les projets récents n'accordent plus ces droits par défaut.)
+grant usage on schema public to authenticated;
+grant select on public.profiles, public.participants, public.patients to authenticated;
+
 -- Aucune écriture directe : ni insert, ni update, ni delete pour les comptes connectés ou anonymes.
 -- La fonction carnet-api écrit avec la clé de service, après vérification.
 revoke insert, update, delete on public.profiles, public.participants, public.patients, public.events from anon, authenticated;
