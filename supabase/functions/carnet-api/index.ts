@@ -39,7 +39,8 @@ const CORS = {
 };
 
 class Refus extends Error {
-  constructor(readonly status: number, readonly code: string, message: string) {
+  /** detail : raison technique renvoyée avec le refus, sans secret, pour le diagnostic. */
+  constructor(readonly status: number, readonly code: string, message: string, readonly detail?: string) {
     super(message);
   }
 }
@@ -69,13 +70,24 @@ function aal(jwt: string): string {
 
 async function caller(req: Request): Promise<{ profile: Profile; jwt: string }> {
   const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
-  const { data, error } = await admin.auth.getUser(jwt);
-  if (error || !data.user) {
-    if (jwt) console.error('session refusée : ' + (error?.message ?? 'utilisateur introuvable'));
-    throw new Refus(401, 'no_session', 'Veuillez vous connecter.');
+  if (!jwt) throw new Refus(401, 'no_session', 'Veuillez vous connecter.');
+  // Même vérification que le navigateur (Auth, avec la clé publique de la requête) : elle ne dépend
+  // ni du format de la clé de service ni de l'algorithme de signature des jetons du projet.
+  const res = await fetch(Deno.env.get('SUPABASE_URL') + '/auth/v1/user', {
+    headers: { Authorization: 'Bearer ' + jwt, apikey: req.headers.get('apikey') ?? '' },
+  });
+  const user = res.ok ? ((await res.json()) as { id?: string }) : null;
+  if (!user?.id) {
+    const raison = res.ok ? 'utilisateur introuvable' : `${res.status} ${(await res.text()).slice(0, 200)}`;
+    console.error('session refusée : ' + raison);
+    throw new Refus(401, 'no_session', 'Veuillez vous connecter.', raison);
   }
-  const { data: profile } = await admin.from('profiles').select('*').eq('id', data.user.id).single();
-  if (!profile || profile.disabled) throw new Refus(401, 'no_session', 'Veuillez vous connecter.');
+  const { data: profile, error } = await admin.from('profiles').select('*').eq('id', user.id).maybeSingle();
+  if (error) {
+    console.error('lecture du profil refusée : ' + error.message);
+    throw new Refus(500, 'server', 'La fonction ne peut pas lire la base (clé de service).', error.message);
+  }
+  if (!profile || profile.disabled) throw new Refus(401, 'no_session', 'Veuillez vous connecter.', 'profil absent ou désactivé');
   if (profile.must_change_password) throw new Refus(403, 'password_change_required', "Choisissez d'abord votre mot de passe.");
   return { profile: profile as Profile, jwt };
 }
@@ -382,7 +394,7 @@ Deno.serve(async (req) => {
     requireAdmin(profile, jwt);
     return json(await adminAction(profile, body));
   } catch (e) {
-    if (e instanceof Refus) return json({ error: e.code, message: e.message }, e.status);
+    if (e instanceof Refus) return json({ error: e.code, message: e.message, ...(e.detail ? { detail: e.detail } : {}) }, e.status);
     if (e instanceof SyntaxError) return json({ error: 'validation', message: 'Requête invalide.' }, 400);
     console.error((e as Error).message);
     return json({ error: 'server', message: 'Une erreur est survenue. Réessayez dans quelques instants.' }, 500);
